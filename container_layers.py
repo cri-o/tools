@@ -28,5 +28,13 @@ if m:
         for l in lowerdirs:
                 print l
 else:
-        print "Unable to find match in mount output: ", container_mount_output
+        print "Unable to find lowerdir in mount output: ", container_mount_output
+        sys.exit(1)
+
+m = re.search('upperdir=(.*),workdir', container_mount_output)
+if m:
+        upperdir = m.group(1)
+        print upperdir
+else:
+        print "Unable to find upperdir in mount output: ", container_mount_output
         sys.exit(1)
