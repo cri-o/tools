@@ -13,6 +13,10 @@ except subprocess.CalledProcessError:
         sys.exit(0)
 
 status_json = json.loads(container_status)
+if status_json['status'] == "stopped":
+        print "container already stopped"
+        sys.exit(0)
+
 rootfs_path = status_json['rootfs']
 dir_path = os.path.dirname(rootfs_path)
 top_layer_id = os.path.basename(dir_path)
