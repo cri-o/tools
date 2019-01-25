@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+
+import json
+import os
+import re
+import subprocess
 import sys
 
 if len(sys.argv) < 2:
