@@ -7,18 +7,24 @@ import subprocess
 import sys
 
 
+class SearchError(Exception):
+    pass
+
+class ContainerStateError(Exception):
+    pass
+
+
 def get_container_layers(id):
     try:
         container_status = subprocess.check_output(
             ["runc", "state", container_id])
-    except subprocess.CalledProcessError:
-        print("container not found; probably exited")
-        sys.exit(0)
+    except subprocess.CalledProcessError as e:
+        print "runc state failed: ", e.output
+        raise ContainerStateError("container not found or invalid container id")
 
     status_json = json.loads(container_status)
     if status_json['status'] == "stopped":
-        print("container already stopped")
-        sys.exit(0)
+        raise ContainerStateError("container already stopped")
 
     rootfs_path = status_json['rootfs']
     dir_path = os.path.dirname(rootfs_path)
@@ -35,8 +41,7 @@ def get_container_layers(id):
                 break
 
     if container_mount_output == "":
-        print("container mount not found; probably exited")
-        sys.exit(0)
+        raise SearchError("container mount not found; probably exited")
 
     layers = []
     m = re.search('lowerdir=(.*),upperdir', container_mount_output)
@@ -45,26 +50,29 @@ def get_container_layers(id):
         for l in lower_dirs:
             layers.append(l)
     else:
-        print("Unable to find lowerdir in mount output: ", container_mount_output)
-        sys.exit(1)
+        raise SearchError("Unable to find lowerdir in mount output: ", container_mount_output)
 
     m = re.search('upperdir=(.*),workdir', container_mount_output)
     if m:
         upper_dir = m.group(1)
         layers.append(upper_dir)
     else:
-        print("Unable to find upperdir in mount output: ", container_mount_output)
-        sys.exit(1)
+        raise SearchError("Unable to find upperdir in mount output: ", container_mount_output)
 
     return layers
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: sys.argv[0] <container_id>")
+        print "Usage: sys.argv[0] <container_id>"
         sys.exit(1)
 
     container_id = sys.argv[1]
-    layers = get_container_layers(container_id)
-    for l in layers:
-        print(l)
+    try:
+        layers = get_container_layers(container_id)
+    except Exception as e:
+        print "Getting container layers failed: ", e
+        sys.exit(1)
+    else:
+        for l in layers:
+            print l
